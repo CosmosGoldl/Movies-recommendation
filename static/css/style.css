@@ -1,0 +1,473 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik&family=Rubik+Mono+One&display=swap');
+
+body {
+  background-color: #141414; /* Netflix dark background */
+  font-family: 'Rubik', sans-serif;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+h1 {
+  font-size: 2.8em;
+  color: #E50914; /* Netflix red */
+  font-family: 'Rubik Mono One', sans-serif;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 50px;
+  letter-spacing: 1px;
+}
+
+.search-section {
+  background-color: #1a1a1a;
+  padding: 30px;
+  border-radius: 8px;
+  margin-bottom: 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.search-box {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.search-box h3 {
+  font-size: 1.5em;
+  color: #E50914; /* Netflix red */
+  font-family: 'Rubik', sans-serif;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.search-box input {
+  padding: 12px;
+  font-size: 1em;
+  width: 70%;
+  max-width: 400px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background-color: #222;
+  color: #fff;
+  font-family: 'Rubik', sans-serif;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.search-box input:focus {
+  border-color: #E50914; /* Netflix red */
+}
+
+.search-box button {
+  padding: 12px 24px;
+  font-size: 1em;
+  border: none;
+  border-radius: 6px;
+  background-color: #E50914; /* Netflix red */
+  color: #ffffff;
+  cursor: pointer;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.search-box button:hover {
+  background-color: #B20710; /* Darker variant of Netflix red for hover */
+  transform: translateY(-2px);
+}
+
+.section {
+  margin-bottom: 40px;
+  display: none; /* Hide sections by default */
+}
+
+.section.active {
+  display: block; /* Show section when active */
+}
+
+.section h2 {
+  font-size: 1.8em;
+  color: #fff;
+  font-family: 'Rubik', sans-serif;
+  margin-bottom: 20px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section .view-all {
+  font-size: 1em;
+  color: #E50914; /* Netflix red */
+  font-family: 'Rubik', sans-serif;
+  text-decoration: none;
+  float: right;
+  margin-top: -40px;
+  transition: color 0.3s;
+}
+
+.section .view-all:hover {
+  color: #B20710; /* Darker variant of Netflix red for hover */
+}
+
+.results {
+  display: flex;
+  overflow-x: auto;
+  gap: 20px;
+  padding: 0 10px;
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color: #666 #222; /* Thumb and track colors for Firefox */
+}
+
+.results::-webkit-scrollbar {
+  height: 8px;
+}
+
+.results::-webkit-scrollbar-track {
+  background: #222; /* Dark track */
+}
+
+.results::-webkit-scrollbar-thumb {
+  background-color: #666; /* Gray thumb */
+  border-radius: 4px;
+}
+
+.results::-webkit-scrollbar-thumb:hover {
+  background-color: #999; /* Lighter gray on hover */
+}
+
+.movie-card {
+  position: relative;
+  min-width: 200px; /* Fixed width for consistent scrolling */
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.movie-card img {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.movie-card:hover {
+  transform: scale(1.05);
+}
+
+.movie-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  color: #fff;
+  font-family: 'Rubik', sans-serif;
+  padding: 15px;
+  font-size: 0.85em;
+  border-radius: 0 0 8px 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.movie-card:hover .movie-info {
+  opacity: 1;
+}
+
+.movie-info h4 {
+  margin: 0 0 5px;
+  font-size: 1.1em;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+}
+
+.movie-info p {
+  margin: 5px 0;
+  line-height: 1.4;
+  font-family: 'Rubik', sans-serif;
+}
+
+.movie-info .watch-btn {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 16px;
+  background-color: #E50914; /* Netflix red */
+  color: #ffffff;
+  border-radius: 4px;
+  text-decoration: none;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  font-size: 0.9em;
+  transition: background-color 0.3s;
+}
+
+.movie-info .watch-btn:hover {
+  background-color: #B20710; /* Darker variant of Netflix red for hover */
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent overlay */
+  z-index: 1000;
+}
+
+.modal-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #141414;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  display: flex;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.modal-poster {
+  position: relative;
+  flex: 0 0 300px;
+}
+
+.modal-poster img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.modal-poster .play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #E50914; /* Netflix red */
+  border: none;
+  color: #fff;
+  font-family: 'Rubik', sans-serif;
+  font-size: 1.5em;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.modal-poster .play-btn:hover {
+  background-color: #B20710; /* Darker variant of Netflix red for hover */
+}
+
+.modal-details {
+  flex: 1;
+  padding-left: 20px;
+}
+
+.modal-details h2 {
+  font-size: 2em;
+  color: #fff;
+  font-family: 'Rubik', sans-serif;
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+
+.modal-meta {
+  font-size: 0.9em;
+  color: #999;
+  font-family: 'Rubik', sans-serif;
+  margin-bottom: 10px;
+}
+
+.modal-details p {
+  margin: 10px 0;
+  line-height: 1.5;
+  color: #ccc;
+  font-family: 'Rubik', sans-serif;
+}
+
+.modal-actions {
+  margin: 20px 0;
+}
+
+.play-btn, .more-info-btn {
+  display: inline-block;
+  padding: 10px 20px;
+  margin-right: 10px;
+  border: none;
+  border-radius: 4px;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.play-btn {
+  background-color: #E50914; 
+  color: #fff;
+}
+
+.play-btn:hover {
+  background-color: #B20710; /* Darker variant of red for hover */
+}
+
+.more-info-btn {
+  background-color: #333;
+  color: #fff;
+  font-family: 'Rubik', sans-serif;
+}
+
+.more-info-btn:hover {
+  background-color: #444;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 2em;
+  color: #fff;
+  font-family: 'Rubik', sans-serif;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.close-btn:hover {
+  color: #E50914; /* Netflix red on hover */
+}
+
+/* Similar Movies Modal Styles */
+#similarModal .modal-content {
+  max-width: 1000px;
+  flex-direction: column;
+  text-align: center;
+}
+
+#similarModal h2 {
+  font-size: 1.8em;
+  font-family: 'Rubik', sans-serif;
+  margin-bottom: 20px;
+}
+
+#similarModal .results {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 20px;
+  padding: 0 20px;
+  scroll-behavior: smooth;
+  scroll-padding-left: 0;
+  justify-content: flex-start;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2.2em;
+  }
+
+  .search-box input {
+    width: 100%;
+  }
+
+  .search-box button {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .movie-card {
+    min-width: 160px; /* Adjust for smaller screens */
+  }
+
+  .modal-content {
+    flex-direction: column;
+    max-width: 600px;
+    text-align: center;
+  }
+
+  .modal-poster {
+    flex: 0 0 200px;
+    margin-bottom: 20px;
+  }
+
+  .modal-poster .play-btn {
+    font-size: 1.2em;
+    padding: 8px 16px;
+  }
+
+  .modal-details {
+    padding-left: 0;
+  }
+
+  .modal-details h2 {
+    font-size: 1.5em;
+  }
+
+  #similarModal .modal-content {
+    max-width: 90%;
+  }
+
+  #similarModal .results {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.8em;
+  }
+
+  .search-section {
+    padding: 20px;
+  }
+
+  .movie-info {
+    font-size: 0.75em;
+  }
+
+  .movie-card {
+    min-width: 140px; /* Further adjust for small screens */
+  }
+
+  .modal-content {
+    width: 85%;
+  }
+
+  .modal-poster {
+    flex: 0 0 150px;
+  }
+
+  .modal-poster .play-btn {
+    font-size: 1em;
+    padding: 6px 12px;
+  }
+
+  .modal-details h2 {
+    font-size: 1.2em;
+  }
+
+  .play-btn, .more-info-btn {
+    padding: 8px 16px;
+  }
+
+  #similarModal .modal-content {
+    width: 85%;
+  }
+
+  #similarModal .results {
+    max-height: 200px;
+  }
+}
