@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error - Movie Recommender</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="error-container">
+      <h1>Oops! Something went wrong</h1>
+      <div class="error-message">
+        <p>{{ message }}</p>
+      </div>
+      <div class="error-actions">
+        <a href="{{ url_for('home') }}" class="btn">Go Back Home</a>
+        <a href="javascript:history.back()" class="btn btn-secondary">Go Back</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

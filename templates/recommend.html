@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if mode == 'content' %}Content-Based: {{ query }}
+         {% elif mode == 'genre' %}Genre: {{ query }}
+         {% endif %} - Movie Recommender</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="{{ url_for('home') }}" class="back-btn">← Back to Home</a>
+      <h1>
+        {% if mode == 'content' %}
+          Content-Based: "{{ query }}"
+        {% elif mode == 'genre' %}
+          Genre: {{ query }}
+        {% endif %}
+      </h1>
+    </div>
+
+    <div class="recommendations-grid">
+      {% for movie in movies %}
+      <div class="movie-card" onclick="showMovieDetails('{{ movie.movieId }}', '{{ movie.title|e }}', '{{ movie.poster }}', '{{ movie.year }}', '{{ movie.plot|e }}', '{{ movie.score }}', '{{ movie.imdbRating }}', '{{ movie.actors|e }}')">
+        <div class="movie-poster">
+          {% if movie.poster and movie.poster != 'N/A' %}
+            <img src="{{ movie.poster }}" alt="{{ movie.title }}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+          {% else %}
+            <img src="https://via.placeholder.com/300x450?text=No+Image" alt="{{ movie.title }}">
+          {% endif %}
+          <div class="movie-overlay">
+            <div class="play-btn">▶</div>
+          </div>
+        </div>
+        <div class="movie-info">
+          <h3>{{ movie.title }}</h3>
+          <div class="movie-meta">
+            {% if movie.year %}{{ movie.year }} • {% endif %}
+            <span class="score">Score: {{ "%.3f"|format(movie.score) }}</span>
+          </div>
+          {% if movie.imdbRating and movie.imdbRating != 'N/A' %}
+            <div class="imdb-rating">IMDb: {{ movie.imdbRating }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if not movies %}
+      <div class="no-results">
+        <h2>No recommendations found</h2>
+        <p>
+          {% if mode == 'content' %}
+            No content-based recommendations found for "{{ query }}".
+          {% elif mode == 'genre' %}
+            No movies found for genre "{{ query }}".
+          {% endif %}
+        </p>
+        <a href="{{ url_for('home') }}" class="btn">Go Back</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Modal for Movie Details -->
+  <div id="movieModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <div class="modal-poster">
+        <img id="modalPoster" src="" alt="Movie Poster">
+      </div>
+      <div class="modal-details">
+        <h2 id="modalTitle"></h2>
+        <div class="modal-meta">
+          <span id="modalYear"></span> • <span>HD</span>
+        </div>
+        <p id="modalPlot"></p>
+        <div class="modal-actions">
+          <a href="#" id="modalPlayBtn" class="play-btn">▶ Play</a>
+        </div>
+        <p><strong>Score:</strong> <span id="modalScore"></span></p>
+        <p><strong>IMDb Rating:</strong> <span id="modalImdbRating"></span></p>
+        <p><strong>Actors:</strong> <span id="modalActors"></span></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

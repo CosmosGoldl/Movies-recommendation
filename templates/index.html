@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Recommender</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=202601241">
+</head>
+<body>
+  <div class="container">
+    <h1>Movie Recommender</h1>
+
+    <div class="search-section">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <button onclick="openGuidelinesModal()" style="background-color: #E50914; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.3s, transform 0.2s; font-family: 'Rubik', sans-serif;" onmouseover="this.style.backgroundColor='#B20710'; this.style.transform='translateY(-2px)'" onmouseout="this.style.backgroundColor='#E50914'; this.style.transform='translateY(0)'">
+          Movie Search Guidelines
+        </button>
+      </div>
+      
+      <div class="search-box">
+        <h3>Movies for You</h3>
+        <input type="number" id="userIdInput" placeholder="Enter User ID...">
+        <button onclick="getRecommendations()">Recommend</button>
+      </div>
+
+      <div class="search-box">
+        <h3>Similar movies</h3>
+        <input type="text" id="movieInput" placeholder="Enter movie name...">
+        <button onclick="getSimilar()">Find similar movies</button>
+      </div>
+
+      <div class="search-box">
+        <h3>Content-based Similar</h3>
+        <input type="text" id="contentMovieInput" placeholder="Enter movie name...">
+        <button onclick="getContentBased()">Find content-based</button>
+      </div>
+
+      <div class="search-box">
+        <h3>Genre Recommendations</h3>
+        <input type="text" id="genreInput" placeholder="Enter genres (e.g., Action|Comedy)...">
+        <button onclick="getGenreBased()">Find by genres</button>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin: 30px 0 50px 0;">
+      <button onclick="startOnboarding()" 
+              style="background-color: #E50914; color: white; width: 100%; max-width: 550px; padding: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 16px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.2s, background-color 0.2s;"
+              onmouseover="this.style.backgroundColor='#ff0a16'; this.style.transform='scale(1.02)';" 
+              onmouseout="this.style.backgroundColor='#E50914'; this.style.transform='scale(1)';">
+          You don't know what to watch? Let us help you!
+      </button>
+    </div>
+
+    <div id="systemRecommend" class="section">
+      <h2>System Recommend</h2>
+      <a href="#" class="view-all">View All</a>
+      <div id="systemRecommendResults" class="results"></div>
+    </div>
+
+    <div id="moviesForYou" class="section">
+      <h2>ALS Results</h2>
+      <a href="#" class="view-all">View All</a>
+      <div id="moviesForYouResults" class="results"></div>
+    </div>
+
+    <div id="contentBased" class="section">
+      <h2>ContentBased Results</h2>
+      <a href="#" class="view-all">View All</a>
+      <div id="contentBasedResults" class="results"></div>
+    </div>
+
+    <div id="becauseYouWatched" class="section">
+      <h2>Because You Watched</h2>
+      <a href="#" class="view-all">View All</a>
+      <div id="becauseYouWatchedResults" class="results"></div>
+    </div>
+
+    <div id="genreBased" class="section">
+      <h2>Genre-Based Recommendations</h2>
+      <a href="#" class="view-all">View All</a>
+      <div id="genreBasedResults" class="results"></div>
+    </div>
+  </div>
+
+  <div id="movieModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <div class="modal-poster">
+        <img id="modalPoster" src="" alt="Movie Poster">
+      </div>
+      <div class="modal-details">
+        <h2 id="modalTitle"></h2>
+        <div class="modal-meta">
+          <span id="modalYear"></span> • <span>HD</span>
+        </div>
+        <p id="modalPlot"></p>
+        <div class="modal-actions">
+          <a href="#" id="modalPlayBtn2" class="play-btn">▶ Play</a>
+          <a href="#" class="more-info-btn" onclick="showSimilarMovies(event)">More movies</a>
+        </div>
+        <p><strong>Score:</strong> <span id="modalScore"></span></p>
+        <p><strong>IMDb Rating:</strong> <span id="modalImdbRating"></span></p>
+        <p><strong>Actors:</strong> <span id="modalActors"></span></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="similarModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeSimilarModal()">&times;</span>
+      <h2>More movies like that</h2>
+      <div id="similarResults" class="results"></div>
+    </div>
+  </div>
+
+  <div id="guidelinesModal" class="modal">
+    <div class="modal-content" style="flex-direction: column; max-width: 800px; max-height: 90vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #E50914 #333;">
+        <span class="close-btn" onclick="closeGuidelinesModal()">&times;</span>
+        <h2 style="color: #E50914; text-align: center; margin-bottom: 20px;">Movie Search Guidelines</h2>
+        
+        <div style="background-color: #222; padding: 25px; border-radius: 6px; border-left: 4px solid #E50914; color: #fff; margin-bottom: 20px; line-height: 1.8;">
+            <p>For the best search results, please follow these simple guidelines:</p>
+            <br>
+            <p><strong>Basic Rules:</strong></p>
+            <p>• Use lowercase letters for consistency</p>
+            <p>• Skip articles ("the", "a", "an") at the beginning of titles</p>
+            <p>• Add release year for specific movie versions</p>
+            <p>• Try partial matches if exact search doesn't work</p>
+            <p>• Use key words from the movie title</p>
+        </div>
+        
+        <div style="background-color: #222; padding: 20px; border-radius: 6px; border: 1px solid #333; margin-bottom: 20px;">
+            <h3 style="color: #E50914; margin-top: 0; font-size: 1.2em; font-weight: 600;">Quick Examples:</h3>
+            <p><span style="color: #28a745; font-weight: bold; font-size: 16px;">Good:</span> <span style="color: #fff; font-weight: 500;">"toy story", "avengers 2012", "dark knight"</span></p>
+            <p><span style="color: #dc3545; font-weight: bold; font-size: 16px;">Avoid:</span> <span style="color: #fff; font-weight: 500;">"the avengers", "avengers, the (2012)", "The Dark Knight"</span></p>
+        </div>
+        
+        <div style="background-color: #222; padding: 20px; border-radius: 6px; border: 1px solid #333; margin-bottom: 20px;">
+            <h3 style="color: #E50914; margin-top: 0; font-size: 1.2em; font-weight: 600;">Pro Tips:</h3>
+            <ul style="color: #fff;">
+                <li style="margin: 8px 0;">Use lowercase letters for consistency</li>
+                <li style="margin: 8px 0;">Skip articles ("the", "a", "an") at the beginning</li>
+                <li style="margin: 8px 0;">Add year for specific movie versions</li>
+                <li style="margin: 8px 0;">Try partial matches if exact search doesn't work</li>
+                <li style="margin: 8px 0;">Use key words from the movie title</li>
+            </ul>
+        </div>
+    </div>
+  </div>
+
+  <div id="onboardingModal" class="modal">
+    <div class="modal-content" style="flex-direction: column; max-width: 900px; max-height: 90vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #E50914 #333;">
+        <span class="close-btn" onclick="closeOnboarding()">&times;</span>
+        <h2 style="color: #E50914; text-align: center; margin-bottom: 10px;">Tell us what you like</h2>
+        <p style="text-align: center; color: #ccc; margin-bottom: 5px;">Select at least 3 movies to get personalized recommendations</p>
+        <p id="selectionCount" style="color: #ccc; text-align: center; font-weight: bold; margin-bottom: 20px;">Selected: 0 movies - Choose at least 3 movies you enjoy</p>
+        
+        <div id="onboardingGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #333; border-radius: 8px; background: rgba(0,0,0,0.3);">
+        </div>
+
+        <div style="margin-top: 20px; text-align: center; padding-bottom: 10px;">
+            <button id="reloadSamples" onclick="reloadSampleMovies()" style="background-color: #666; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; margin-right: 15px; transition: background-color 0.3s;" onmouseover="this.style.backgroundColor='#777'" onmouseout="this.style.backgroundColor='#666'">
+                Load Different Movies
+            </button>
+            <button id="submitOnboarding" onclick="submitSelection()" class="search-box button" disabled style="opacity: 0.5; background-color: #666; color: white; border: none; padding: 12px 30px; border-radius: 5px; cursor: not-allowed; font-size: 16px; font-weight: bold; transition: all 0.3s;">
+                Select 3 movies to start
+            </button>
+        </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}?v=202601241"></script>
+</body>
+</html>
