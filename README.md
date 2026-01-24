@@ -1,6 +1,6 @@
 # Movie Recommendation System
 
-A comprehensive movie recommendation system that combines multiple recommendation techniques to provide personalized movie suggestions. The system integrates collaborative filtering, content-based filtering, and hybrid approaches through a user-friendly web interface.
+This movie recommendation system helps users find movies they might enjoy by applying multiple recommendation techniques to provide a more personalized movie suggestions. The system integrates collaborative filtering, content-based filtering, and hybrid approaches through a user-friendly web interface.
 
 ## Authors
 
