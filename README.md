@@ -1,6 +1,6 @@
 # Movie Recommendation System
 
-A comprehensive movie recommendation system that combines multiple recommendation techniques to provide personalized movie suggestions. The system integrates collaborative filtering, content-based filtering, and hybrid approaches through a user-friendly web interface.
+This movie recommendation system helps users find movies they might enjoy by applying multiple recommendation techniques to provide a more personalized movie suggestions. The system integrates collaborative filtering, content-based filtering, and hybrid approaches through a user-friendly web interface.
 
 ## Authors
 
@@ -19,6 +19,28 @@ This project uses the **MovieLens 25M Dataset**, which contains 25 million ratin
 - **Web Interface**: Flask-based web application for easy interaction
 - **Enhanced Movie Information**: Integration with OMDB API for additional movie details like posters and plot descriptions
 - **Smart Search**: Fuzzy matching and normalization for movie title searches
+
+## Project UI:
+
+<img width="1897" height="927" alt="Screenshot 2026-01-24 103942" src="https://github.com/user-attachments/assets/fe55320a-b211-483d-a84c-401e72a827b0" />
+
+__________________________________________________________________________________________________________________________________________________________
+<img width="1898" height="925" alt="Screenshot 2026-01-24 104003" src="https://github.com/user-attachments/assets/416451b2-8623-4305-b813-e19a25d2d03c" />
+
+__________________________________________________________________________________________________________________________________________________________
+<img width="1902" height="926" alt="Screenshot 2026-01-24 104101" src="https://github.com/user-attachments/assets/3361f782-0254-4e23-86b4-2ef76f3b4645" />
+
+__________________________________________________________________________________________________________________________________________________________
+<img width="1898" height="925" alt="Screenshot 2026-01-24 104527" src="https://github.com/user-attachments/assets/48acdfe9-7d52-45f9-aa8f-958fcc9c4059" />
+
+__________________________________________________________________________________________________________________________________________________________
+<img width="1901" height="928" alt="Screenshot 2026-01-24 104640" src="https://github.com/user-attachments/assets/5b533c2f-4b3d-4d95-97c0-11c5bdf3bf74" />
+
+__________________________________________________________________________________________________________________________________________________________
+<img width="1901" height="926" alt="Screenshot 2026-01-24 104703" src="https://github.com/user-attachments/assets/4fdffe2f-ee18-491d-bf67-65ea57c40019" />
+
+__________________________________________________________________________________________________________________________________________________________
+
 
 ## Project Structure
 
