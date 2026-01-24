@@ -16,7 +16,60 @@ import threading
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-OMDB_API_KEY = "e54bd3ba"
+OMDB_API_KEY = "a4e75082"
+
+# --- ANCHOR MOVIES CONFIGURATION ---
+ANCHOR_PRIMARY_GENRE = {
+    "Matrix, The (1999)": "Sci-Fi",
+    "Gladiator (2000)": "Action",
+    "Memento (2000)": "Thriller",
+    "Lord of the Rings: The Fellowship of the Ring, The (2001)": "Adventure",
+    "Shrek (2001)": "Animation",
+    "Beautiful Mind, A (2001)": "Drama",
+    "Spider-Man (2002)": "Action",
+    "Lord of the Rings: The Two Towers, The (2002)": "Adventure",
+    "Finding Nemo (2003)": "Animation",
+    "Lord of the Rings: The Return of the King, The (2003)": "Adventure",
+    "Dark Knight, The (2008)": "Action",
+    "Iron Man (2008)": "Action",
+    "WALL·E (2008)": "Animation",
+    "Slumdog Millionaire (2008)": "Drama",
+    "Avatar (2009)": "Sci-Fi",
+    "Inception (2010)": "Sci-Fi",
+    "Toy Story 3 (2010)": "Animation",
+    "Avengers, The (2012)": "Action",
+    "Django Unchained (2012)": "Drama",
+    "Interstellar (2014)": "Sci-Fi",
+    "Guardians of the Galaxy (2014)": "Sci-Fi",
+    "Mad Max: Fury Road (2015)": "Action",
+    "Inside Out (2015)": "Animation",
+    "La La Land (2016)": "Comedy",
+    "Parasite (2019)": "Drama",
+    "Empire Strikes Back, The (1980)": "Sci-Fi",
+    "Raiders of the Lost Ark (1981)": "Adventure",
+    "E.T. the Extra-Terrestrial (1982)": "Sci-Fi",
+    "Blade Runner (1982)": "Sci-Fi",
+    "Back to the Future (1985)": "Sci-Fi",
+    "Princess Bride, The (1987)": "Adventure",
+    "Indiana Jones and the Last Crusade (1989)": "Adventure",
+    "Terminator 2: Judgment Day (1991)": "Action",
+    "Beauty and the Beast (1991)": "Animation",
+    "Jurassic Park (1993)": "Adventure",
+    "Shawshank Redemption, The (1994)": "Drama",
+    "Pulp Fiction (1994)": "Drama",
+    "Forrest Gump (1994)": "Drama",
+    "Toy Story (1995)": "Animation",
+    "Titanic (1997)": "Drama"
+}
+
+ANCHOR_TARGETS = {
+    "Sci-Fi": 3,
+    "Action": 3,
+    "Adventure": 3,
+    "Drama": 3,
+    "Animation": 2,
+    "Comedy": 2
+}
 
 # --- THREAD-SAFE CACHE FOR OMDB API ---
 omdb_cache = {}  # Cache OMDB results: {imdbId: omdb_response}
@@ -97,6 +150,18 @@ print("Content-Based Model đã load thành công")
 hybrid = HybridRecommender(cf, rating, movie)
 print("Hybrid Recommender đã khởi tạo thành công")
 
+# --- CACHE OPTIMIZATION ---
+# Cache avg_ratings at startup (only calculate once)
+print("Đang tính toán avg_ratings...")
+avg_ratings_cache = rating.groupby("movieId")["rating"].agg(["mean", "count"]).reset_index()
+avg_ratings_cache.columns = ["movieId", "avg_rating", "rating_count"]
+print(f"✅ Cached avg_ratings for {len(avg_ratings_cache)} movies")
+
+# Clear old OMDB cache on startup (remove stale error responses)
+print("Clearing old OMDB cache...")
+omdb_cache.clear()
+print("✅ OMDB cache cleared - fresh start")
+
 # --- 3. HELPER FUNCTIONS ---
 # Track cache stats
 cache_stats_data = {'hits': 0, 'misses': 0}
@@ -143,16 +208,21 @@ def movieinfo(rec):
             if should_fetch:
                 url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&i={imdbid}&plot=short"
                 try:
-                    omdb = requests.get(url, timeout=5).json()
+                    resp = requests.get(url, timeout=5)
+                    omdb = resp.json()
+                    print(f"OMDB fetch: {imdbid} -> Response={omdb.get('Response', 'N/A')}, Error={omdb.get('Error', 'None')}")
                     # Lưu kết quả vào cache (thay thế _FETCHING)
                     if omdb.get('Response') == 'True':
                         with omdb_cache_lock:
                             omdb_cache[imdbid] = omdb
                     else:
-                        # Remove sentinel nếu fetch failed
+                        # Don't cache errors - let next request retry
+                        print(f"⚠️ OMDB failed for {imdbid}: {omdb.get('Error', 'Unknown error')} - NOT CACHING")
                         with omdb_cache_lock:
                             omdb_cache.pop(imdbid, None)
-                except:
+                        omdb = {}  # Return empty dict instead of error response
+                except Exception as e:
+                    print(f"❌ OMDB exception for {imdbid}: {e}")
                     omdb = {}
                     # Remove sentinel on error
                     with omdb_cache_lock:
@@ -295,6 +365,30 @@ def cbgenre(genres):
     rec = cb.recommend_by_genre(genres, top_k=15)
     return movieinfo(rec)
 
+# --- WARM CACHE FOR ANCHOR MOVIES ---
+def warm_anchor_cache():
+    """Pre-fetch OMDB data for all anchor movies at startup"""
+    print("Đang warm cache cho anchor movies...")
+    anchor_movie_ids = []
+    for title in ANCHOR_PRIMARY_GENRE.keys():
+        movie_row = movie[movie["title"] == title]
+        if not movie_row.empty:
+            anchor_movie_ids.append((int(movie_row.iloc[0]["movieId"]), title, 0))
+    
+    if anchor_movie_ids:
+        # Fetch với delay nhỏ để tránh rate limit
+        import time
+        for mid, title, score in anchor_movie_ids[:10]:  # Chỉ warm 10 movies đầu tiên
+            movieinfo([(mid, title, score)])
+            time.sleep(0.1)  # 100ms delay giữa mỗi request
+        print(f"✅ Warmed cache for {min(10, len(anchor_movie_ids))} anchor movies")
+    else:
+        print("⚠️ No anchor movies found for cache warming")
+
+# Call warm cache after movieinfo is defined (OPTIONAL - comment out nếu gặp vấn đề)
+# warm_anchor_cache()
+print("⚠️ Warm cache disabled - enable by uncommenting warm_anchor_cache()")
+
 # --- 4. ROUTES (UI) ---
 @app.route("/")
 def home():
@@ -357,229 +451,191 @@ def guidelinesUI():
 # --- 5. API ROUTES ---
 @app.route("/api/movies/sample")
 def get_sample():
-    try:
-        import random
-        import time
+    import random, time
+
+    refresh = request.args.get("refresh", "false") == "true"
+    if refresh:
+        random.seed(time.time())
+    
+    # 1.1 – Build anchors (20 movies)
+    anchor_rows = movie[movie["title"].isin(ANCHOR_PRIMARY_GENRE.keys())]
+    anchor_by_genre = {g: [] for g in ANCHOR_TARGETS}
+    
+    for _, r in anchor_rows.iterrows():
+        g = ANCHOR_PRIMARY_GENRE.get(r["title"])
+        if g in anchor_by_genre:
+            anchor_by_genre[g].append(r)
+
+    anchors = []
+    used_ids = set()
+
+    for genre, k in ANCHOR_TARGETS.items():
+        pool = anchor_by_genre.get(genre, [])
+        picks = random.sample(pool, k) if len(pool) >= k else pool
         
-        # Kiểm tra parameter refresh để thay đổi seed cho random
-        refresh = request.args.get('refresh', 'false').lower() == 'true'
-        if refresh:
-            random.seed(int(time.time()))
+        for r in picks:
+            anchors.append({
+                "movieId": int(r["movieId"]),
+                "title": r["title"]
+            })
+            used_ids.add(int(r["movieId"]))
+
+    # Fill to 20
+    remaining = anchor_rows[~anchor_rows["movieId"].isin(used_ids)]
+    fill_needed = 20 - len(anchors)
+    
+    if fill_needed > 0 and not remaining.empty:
+        for _, r in remaining.sample(n=min(fill_needed, len(remaining))).iterrows():
+            anchors.append({
+                "movieId": int(r["movieId"]),
+                "title": r["title"]
+            })
+            used_ids.add(int(r["movieId"]))
+
+    print(f"📊 [STEP 1.1] Anchors selected: {len(anchors)}/20 (expected: 20)")
+    
+    if len(anchors) < 16:
+        print("⚠️ WARNING: Anchor thiếu - check movies.csv title match")
+
+    # 1.2 – Build pool (exclude anchors)
+    pool = movie[~movie["movieId"].isin(used_ids)].copy()
+    pool["year"] = pool["title"].str.extract(r"\((\d{4})\)").astype(float)
+
+    pool_old = pool[(pool["year"] >= 1980) & (pool["year"] < 2000)]
+    pool_new = pool[pool["year"] >= 2000]
+
+    # 1.3 – Select vintage (7–15 movies, NO OMDB)
+    target_old = random.randint(7, 15)
+    vintage = []
+    genre_count = {}
+    genre_cap = 5
+    
+    # Chỉ chọn từ mainstream genres, bỏ niche (War, Film-Noir, Western, Musical, Documentary)
+    mainstream_genres = {'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Drama', 
+                        'Fantasy', 'Horror', 'Romance', 'Sci-Fi', 'Thriller'}
+
+    for _, r in pool_old.sample(frac=1).iterrows():
+        if len(vintage) >= target_old:
+            break
+        if pd.isna(r["genres"]):
+            continue
+
+        primary = r["genres"].split("|")[0]
         
-        # BƯỚC 1: Chọn NHIỀU phim từ database (40-50 phim) - KHÔNG GỌI OMDB
-        movie_copy = movie.copy()
-        movie_copy['year'] = movie_copy['title'].str.extract(r'\((\d{4})\)').astype(float)
-        
-        # Ưu tiên phim từ 2000 trở về sau
-        modern_movies = movie_copy[(movie_copy['year'] >= 2000) & (movie_copy['year'].notna())]
-        classic_movies = movie_copy[(movie_copy['year'] < 2000) & (movie_copy['year'] >= 1980) & (movie_copy['year'].notna())]
-        
-        # Đa dạng genre: chia thành 3 nhóm
-        mainstream_genres = ['Action', 'Comedy', 'Drama', 'Thriller']
-        popular_genres = ['Romance', 'Adventure', 'Sci-Fi', 'Horror']
-        niche_genres = ['Crime', 'Animation', 'Fantasy', 'Mystery', 'Documentary', 'War']
-        
-        candidate_movies = []
-        seen_titles = set()
-        
-        # Lấy 3-4 phim cho mỗi mainstream genre (có nhiều lựa chọn để lọc sau)
-        for genre in mainstream_genres:
-            genre_movies = modern_movies[modern_movies['genres'].str.contains(genre, na=False, case=False)]
-            if not genre_movies.empty:
-                sample_size = min(4, len(genre_movies))
-                genre_sample = genre_movies.sample(n=sample_size)
-                
-                for _, row in genre_sample.iterrows():
-                    if row['title'] not in seen_titles:
-                        seen_titles.add(row['title'])
-                        # Fix #2: primary_genre là genre đầu tiên trong list thực tế
-                        all_genres = row['genres'].split('|') if isinstance(row['genres'], str) else []
-                        primary = all_genres[0] if all_genres else genre
-                        candidate_movies.append({
-                            'movieId': row['movieId'],
-                            'title': row['title'],
-                            'year': row['year'],
-                            'genres': row['genres'],
-                            'primary_genre': primary,  # Dùng genre thực tế của phim
-                            'search_genre': genre,  # Genre dùng để search
-                            'score': 1.0
-                        })
-        
-        # Lấy 2-3 phim cho mỗi popular genre
-        for genre in popular_genres:
-            genre_movies = modern_movies[modern_movies['genres'].str.contains(genre, na=False, case=False)]
-            if not genre_movies.empty:
-                sample_size = min(3, len(genre_movies))
-                genre_sample = genre_movies.sample(n=sample_size)
-                
-                for _, row in genre_sample.iterrows():
-                    if row['title'] not in seen_titles:
-                        seen_titles.add(row['title'])
-                        all_genres = row['genres'].split('|') if isinstance(row['genres'], str) else []
-                        primary = all_genres[0] if all_genres else genre
-                        candidate_movies.append({
-                            'movieId': row['movieId'],
-                            'title': row['title'],
-                            'year': row['year'],
-                            'genres': row['genres'],
-                            'primary_genre': primary,
-                            'search_genre': genre,
-                            'score': 0.8
-                        })
-        
-        # Lấy 1-2 phim cho niche genres
-        for genre in niche_genres:
-            genre_movies = modern_movies[modern_movies['genres'].str.contains(genre, na=False, case=False)]
-            if not genre_movies.empty and random.random() < 0.7:  # 70% chance
-                genre_sample = genre_movies.sample(n=min(2, len(genre_movies)))
-                for _, row in genre_sample.iterrows():
-                    if row['title'] not in seen_titles:
-                        seen_titles.add(row['title'])
-                        all_genres = row['genres'].split('|') if isinstance(row['genres'], str) else []
-                        primary = all_genres[0] if all_genres else genre
-                        candidate_movies.append({
-                            'movieId': row['movieId'],
-                            'title': row['title'],
-                            'year': row['year'],
-                            'genres': row['genres'],
-                            'primary_genre': primary,
-                            'search_genre': genre,
-                            'score': 0.6
-                        })
-        
-        # Thêm classics (3-5 phim)
-        if not classic_movies.empty:
-            classic_sample = classic_movies.sample(n=min(5, len(classic_movies)))
-            for _, row in classic_sample.iterrows():
-                if row['title'] not in seen_titles:
-                    seen_titles.add(row['title'])
-                    all_genres = row['genres'].split('|') if isinstance(row['genres'], str) else []
-                    primary = all_genres[0] if all_genres else 'Drama'
-                    candidate_movies.append({
-                        'movieId': row['movieId'],
-                        'title': row['title'],
-                        'year': row['year'],
-                        'genres': row['genres'],
-                        'primary_genre': primary,
-                        'search_genre': 'Classic',
-                        'score': 0.7
-                    })
-        
-        # BƯỚC 2: RANK và LỌC xuống còn 20 phim tốt nhất 
-        # Shuffle để tránh bias thứ tự
-        random.shuffle(candidate_movies)
-        
-        # Đảm bảo đa dạng genre trong 20 phim được chọn
-        selected_candidates = []
-        selected_ids = set()  
-        genre_counts = {}
-        max_per_genre = 3  # Tối đa 3 phim/genre để đa dạng
-        
-        # Pass 1: Ưu tiên đa dạng genre
-        for candidate in candidate_movies:
-            genre = candidate['primary_genre']
-            movie_id = candidate['movieId']
-            if genre_counts.get(genre, 0) < max_per_genre and len(selected_candidates) < 20:
-                selected_candidates.append(candidate)
-                selected_ids.add(movie_id)
-                genre_counts[genre] = genre_counts.get(genre, 0) + 1
-        
-        # Pass 2: Nếu chưa đủ 20, thêm phim còn lại
-        for candidate in candidate_movies:
-            movie_id = candidate['movieId']
-            if movie_id not in selected_ids and len(selected_candidates) < 20:
-                selected_candidates.append(candidate)
-                selected_ids.add(movie_id)
-        
-        # BƯỚC 3: CHỈ GỌI OMDB cho 20 phim đã chọn (LAZY FETCH)
-        movie_tuples = [(c['movieId'], c['title'], 0) for c in selected_candidates]
-        movie_details = movieinfo(movie_tuples)  
-        
-        # Parse IMDb rating an toàn
-        def safe_parse_rating(rating_str):
-            """Parse IMDb rating, handle formats: '7.8', '7.8/10', 'N/A'"""
-            try:
-                if rating_str and rating_str not in ["N/A", ""]:
-                    # Fix #3: Handle format "7.8/10"
-                    if '/' in rating_str:
-                        rating_str = rating_str.split('/')[0].strip()
-                    rating = float(rating_str)
-                    if 0 <= rating <= 10:
-                        return rating
-            except (ValueError, TypeError, AttributeError):
-                pass
-            return None
-        
-        # Cho phép phim không có poster - sort tất cả theo rating
-        for movie_detail in movie_details:
-            rating = safe_parse_rating(movie_detail.get('imdbRating'))
-            movie_detail['_rating'] = rating if rating else 0
-            # Bonus điểm cho phim có poster
-            has_poster = movie_detail.get('poster') and movie_detail['poster'] not in ["N/A", ""]
-            if has_poster:
-                movie_detail['_rating'] += 0.5  # Bonus nhỏ cho phim có poster
-        
-        # Sort theo rating (bao gồm cả poster và không poster)
-        movie_details.sort(key=lambda x: x.get('_rating', 0), reverse=True)
-        final_movies = movie_details[:20]
-        random.shuffle(final_movies)
-        
-        # Remove temporary rating field
-        for m in final_movies:
-            m.pop('_rating', None)
-        
-        # Genre distribution thực tế
-        actual_genre_counts = {}
-        for m in final_movies:
-            movie_id = m['movieId']
-            movie_row = movie[movie['movieId'] == movie_id]
-            if not movie_row.empty:
-                genres = movie_row['genres'].values[0]
-                if isinstance(genres, str):
-                    for genre in genres.split('|'):
-                        genre = genre.strip()
-                        actual_genre_counts[genre] = actual_genre_counts.get(genre, 0) + 1
-        
-        # Fix #4: Tính modern_ratio chuẩn hơn
-        def is_modern_movie(year_str):
-            """Check if movie is from 2000 or later"""
-            try:
-                if not year_str or year_str == 'N/A':
-                    return False
-                # Handle various formats: "2010", "2010-2012", etc.
-                year = year_str.split('-')[0].strip()
-                return int(year) >= 2000
-            except (ValueError, AttributeError):
-                return False
-        
-        modern_count = sum(1 for m in final_movies if is_modern_movie(m.get('year')))
-        modern_ratio = modern_count / len(final_movies) if final_movies else 0
-        
-        # Fix #1: Get actual cache stats
-        with cache_stats_lock:
-            current_hits = cache_stats_data['hits']
-            current_misses = cache_stats_data['misses']
-            # Reset for next request tracking
-            cache_stats_data['hits'] = 0
-            cache_stats_data['misses'] = 0
-        
-        return jsonify({
-            "movies": final_movies,
-            "metadata": {
-                "total_movies": len(final_movies),
-                "candidates_evaluated": len(candidate_movies),
-                "api_calls": current_misses,  
-                "cache_hits": current_hits,
-                "cache_total": len(omdb_cache),
-                "genre_distribution": actual_genre_counts,
-                "modern_ratio": round(modern_ratio, 2)
-            }
+        # Bỏ niche genres
+        if primary not in mainstream_genres:
+            continue
+            
+        if genre_count.get(primary, 0) >= genre_cap:
+            continue
+
+        vintage.append({
+            "movieId": int(r["movieId"]),
+            "title": r["title"]
         })
-    except Exception as e:
-        print(f"Error in get_sample: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        genre_count[primary] = genre_count.get(primary, 0) + 1
+
+    print(f"📊 [STEP 1.3] Vintage selected: {len(vintage)}/{target_old} (expected: 7-15, target: {target_old})")
+    
+    # 1.4 – Select modern with WEIGHTED random sampling (rating as weight)
+    target_new = 30 - len(vintage)
+    
+    # Use cached avg_ratings instead of calculating each time
+    pool_new_rated = pool_new.merge(avg_ratings_cache, on="movieId", how="left")
+    pool_new_rated["avg_rating"].fillna(0, inplace=True)
+    pool_new_rated["rating_count"].fillna(0, inplace=True)
+    
+    # Filter: only movies với >= 50 ratings
+    pool_new_rated = pool_new_rated[pool_new_rated["rating_count"] >= 50]
+    
+    # WEIGHTED RANDOM: rating làm weight, normalize to probability
+    pool_new_rated["weight"] = pool_new_rated["avg_rating"] ** 2  # Square để tăng bias cho rating cao
+    total_weight = pool_new_rated["weight"].sum()
+    pool_new_rated["prob"] = pool_new_rated["weight"] / total_weight if total_weight > 0 else 1.0 / len(pool_new_rated)
+    
+    modern = []
+    selected_indices = set()
+    
+    while len(modern) < target_new and len(selected_indices) < len(pool_new_rated):
+        # Weighted random sampling
+        available = pool_new_rated[~pool_new_rated.index.isin(selected_indices)]
+        if available.empty:
+            break
+            
+        # Sample 1 row theo probability
+        sampled = available.sample(n=1, weights="prob")
+        idx = sampled.index[0]
+        r = sampled.iloc[0]
+        
+        selected_indices.add(idx)
+        
+        if pd.isna(r["genres"]):
+            continue
+
+        primary = r["genres"].split("|")[0]
+        
+        # Bỏ niche genres
+        if primary not in mainstream_genres:
+            continue
+            
+        if genre_count.get(primary, 0) >= genre_cap:
+            continue
+
+        modern.append({
+            "movieId": int(r["movieId"]),
+            "title": r["title"]
+        })
+        genre_count[primary] = genre_count.get(primary, 0) + 1
+
+    print(f"📊 [STEP 1.4] Modern selected: {len(modern)}/{target_new} (expected: 30-{len(vintage)}, target: {target_new})")
+    
+    # =====================================================
+    # STEP 2 – Cố định danh sách 50 phim
+    # =====================================================
+    final_50 = anchors + vintage + modern
+    
+    print(f"📊 [STEP 2] Before ensure: {len(final_50)} = {len(anchors)} anchors + {len(vintage)} vintage + {len(modern)} modern")
+    
+    # Ensure exactly 50
+    if len(final_50) < 50:
+        needed = 50 - len(final_50)
+        used_all_ids = {m["movieId"] for m in final_50}
+        fallback = pool[~pool["movieId"].isin(used_all_ids)]
+        
+        if not fallback.empty:
+            for _, r in fallback.sample(n=min(needed, len(fallback))).iterrows():
+                final_50.append({
+                    "movieId": int(r["movieId"]),
+                    "title": r["title"]
+                })
+        print(f"⚠️ [STEP 2] Added {needed} fallback movies to reach 50")
+    
+    elif len(final_50) > 50:
+        print(f"⚠️ [STEP 2] Trimming from {len(final_50)} to 50")
+        final_50 = final_50[:50]
+
+    print(f"✅ [STEP 2] Final count: {len(final_50)} (expected: 50)")
+
+    # =====================================================
+    # STEP 3 – Fetch OMDB cho đúng 50 phim
+    # =====================================================
+    final_tuples = [(m["movieId"], m["title"], 0) for m in final_50]
+    final_movies = movieinfo(final_tuples)
+    
+    random.shuffle(final_movies)
+
+    return jsonify({
+        "movies": final_movies,
+        "metadata": {
+            "total": len(final_movies),
+            "anchors": len(anchors),
+            "vintage_1980_2000": len(vintage),
+            "modern_2000_plus": len(modern),
+            "modern_ratio": round(len(modern) / len(final_movies), 2) if final_movies else 0,
+            "genre_distribution": dict(genre_count),
+            "omdb_calls": len(final_50)  # Chỉ đúng 50 calls
+        }
+    })
 
 @app.route("/api/recommend_personal", methods=["POST"])
 def recommend_personal():
