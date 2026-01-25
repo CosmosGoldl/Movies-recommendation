@@ -348,7 +348,7 @@ async function getSimilar() {
         
         if (!response.ok) throw new Error(data.error || "Movie not found");
         
-        renderResults(data, `Because You Watched "${movieName}"`, 'becauseYouWatchedResults', 'becauseYouWatched');
+        renderResults(data, `Because you watched "${movieName}", others suggest:`, 'becauseYouWatchedResults', 'becauseYouWatched');
     } catch (error) {
         alert(error.message);
     }
